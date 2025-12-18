@@ -27,13 +27,80 @@
 
 }
 
+.project{
+	width:400px;
+	height:150px;
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position-y: center;
+	animation-timing-function: linear;
+
+}
+
+
+#project1{
+background-image: url("car1.png");
+animation-name: whitey;
+animation-iteration-count: infinite;
+animation-duration: 4.05s;
+position: absolute;
+background-size: cover;
+
+}
+#project2{
+	background-image: url("RBcar.png");
+	animation-name: kickZ;
+animation-iteration-count: infinite;
+animation-duration: 3.45s;
+position:absolute;
+padding-top: 150px;
+
+}
+#project3{
+	background-image: url("MCLcar.png");
+	animation-name: laoranje;
+animation-iteration-count: infinite;
+animation-duration: 3.8s;
+position: absolute;
+padding-top: 300px;
+
+}
+
+@keyframes whitey
+{
+from{left:0%}
+45%{left:60%}
+70%{left:85%}
+to{left:120%}
+}
+@keyframes kickZ
+{
+from{left:0%}
+60%{left:54%}
+to{left:120%}
+}
+@keyframes laoranje
+{
+from{left:0%}
+30%{left:52%}
+to{left:120%}
+}
+
 </style>
 </head>
 <body>
 
-<div id="Hihi">Welcome to the projects</div>
-<div id="ioke">As you can see, it sufffers from extreme poverty</div>
+<a href="Clicker.html">
+<div class="project" id="project1"></div>
+</a>
 
+<a href="BDay.html">
+<div class="project" id="project2"></div>
+</a>
+
+<a href="Questions.html">
+<div class="project" id="project3"></div>
+</a>
 
 
 

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		#item{
+width:500px;
+height:500px;
+background-size: contain;
+background-repeat: no-repeat;
+background-image: ;
+
+
+
+		}
+		#surprise{
+			height: 750px;
+			width:750px;
+			background-color: white;
+			background-size: cover;
+		}
+
+#scoreboard{
+
+}
+
+	</style>
+</head>
+<body>
+	<center>click...</center>
+Your Score<div id="scoreboard"></div>
+<div id="item"></div>
+<div id="surprise">
+
+<script type="text/javascript">
+	
+	let score=0
+
+	item.addEventListener("click", function(){
+		score=score+1
+		scoreboard.innerText = score
+
+		if (score==15){
+			surprise.style.backgroundImage = "url(dobby.png)"
+		}
+
+
+
+	})
+
+
+
+</script>
+
+
+</body>
+</html>

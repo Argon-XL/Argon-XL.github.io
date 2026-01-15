@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		.confetti{
+			width: 10px;
+			height:25px;
+			background-color: gold;
+			display: inline-block;
+			border: 3px solid ghostwhite;
+			border-radius: 12px;
+			position: absolute;
+			
+		}
+		body{
+			background-color: black;
+		}
+
+	</style>
+</head>
+<body>
+<script type="text/javascript">
+	// function randomPlace(min,max) {
+	// 	const minCeile
+	// }
+
+
+
+	function makeConfets(){
+		let square = document.createElement("div")
+		square.classList.add("confetti")
+		document.body.appendChild(square)
+		let r= Math.round(Math.random()*255)
+		let g= Math.round(Math.random()*300)
+		let b= Math.round(Math.random()*280)
+		let big= Math.round(Math.random()*30)
+		let rotation = Math.random()*360
+
+
+		function fall(){
+			let Fallfactor = 1
+			square.style.top = parseInt(square.style.top) + Fallfactor + "px"
+
+		}
+		setInterval(fall, 1)
+		square.style.backgroundColor = "rgb("+r+", "+g+", "+b+")"
+		square.style.width = big+"px"
+		square.style.height = big+"px"
+		square.style.top = Math.random() * window.innerWidth + "px"
+		square.style.left = Math.random() * window.innerWidth + "px"
+		square.style.transform = "rotate(" + rotation + "deg)"
+	}
+setInterval(makeConfets, 80)
+
+
+
+</script>
+</body>
+</html>

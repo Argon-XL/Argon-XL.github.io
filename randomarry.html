@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+	#foe{
+		font-size: 100px;
+		color: darkslateblue;
+	}
+
+
+</style>
+</head>
+<body>
+<center><div id = "foe">Click for the type of food to eat on this lovely day</div></center>
+<script type="text/javascript">
+	
+	let cuisinés = ["nihonjin", "japanese", "east chinese", "south chinese","the really spicy one", "vietnamese", "korean", "thai","cantonese"]
+
+document.addEventListener("click", function(){
+let thefood = Math.round(Math.random()*8)
+alert(cuisinés[thefood])
+
+
+})
+
+</script>
+</body>
+</html>

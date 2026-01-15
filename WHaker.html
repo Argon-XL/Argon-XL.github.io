@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		#mole{
+			width: 150px;
+			height: 150px;
+			border-radius: 50%;
+			background image: url(niffle.png);
+			background-repeat: no-repeat;
+			background-size: contain;
+			position: absolute;
+			transition:.5s;
+			background-color: darkolivegreen;
+		}
+
+	</style>
+</head>
+<body>
+<div id="mole"></div>
+
+<script type="text/javascript">
+	
+mole.style.width="150px"
+mole.style.height="150px"
+	function movethemole (){
+		mole.style.left = Math.random()*1000+"px"
+		mole.style.top = Math.random()*1000+"px"
+	}
+mole.addEventListener("click", function(){
+	mole.style.backgroundImage= "url(https://static.wikia.nocookie.net/non-aliencreatures/images/7/7f/Niffler.png/revision/latest/scale-to-width-down/300?cb=20161120221810)"
+})
+setInterval(movethemole, 780)
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+<!-- https://www.whitehouse.gov/wp-content/uploads/2025/01/Donald-J-Trump.jpg; -->

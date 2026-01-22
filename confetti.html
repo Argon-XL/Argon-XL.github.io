@@ -10,32 +10,12 @@
 			/*border: 3px solid ghostwhite;*/
 			border-radius: 12px;
 			position: absolute;
-			animation-name: swing3d;
-			animation-duration: 1.8s;
-			animation-iteration-count: infinite;
-			animation-direction:alternate;
-			animation-timing-function: ease-in-out;
 			
 		}
 		body{
 			background-color: black;
 		}
-@keyframes swing{
-	from {
-		transform: rotate(var(--starRot));
-	}
-	to {
-		transform: rotate(var(--endRot));
-	}
-	}
-	@keyframes swing3d {
-		from{
-			transform: rotateZ(180deg)rotateX(-60deg) rotateY(-180deg);
-		}
-		to{
-			transform: rotateZ(180deg)rotateX(50deg)rotateY(180deg);
-		}
-	}
+
 	</style>
 </head>
 <body>
@@ -56,21 +36,13 @@
 		let big= Math.round(Math.random()*30)
 		let rotation = Math.random()*360
 
-		let startRot = Math.random()*-60 +"deg"
-		let endRot = Math.random()*70 + "deg"
-
-		square.style.setProperty("--startRot", startRot)
-		square.style.setProperty("--endRot", endRot)
-
-
-
 
 		function fall(){
-			let Fallfactor = 2
+			let Fallfactor = 3
 			square.style.top = parseInt(square.style.top) + Fallfactor + "px"
-			if(parseInt(square.style.top) > 1000){
-				square.style.top = Math.random() *100 +"px"
-			}
+			// if(parseInt(square.style.top) > 1000){
+			// 	square.style.top = Math.random() *100 +"px"
+			// }
 
 		}
 		setInterval(fall, 1)

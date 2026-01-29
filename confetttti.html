@@ -5,7 +5,7 @@
 		.confetti{
 			width: 10px;
 			height:25px;
-			background-color: gold;
+			/*background-color: gold;*/
 			display: inline-block;
 			/*border: 3px solid ghostwhite;*/
 			border-radius: 12px;
@@ -43,7 +43,8 @@
 	// function randomPlace(min,max) {
 	// 	const minCeile
 	// }
- let colors = ["blue", "orange", "red", "peachpuff", "white"]
+ let colors = ["#457b9d", "#a8dadc", "#e9edc9", "#cdb4db", "#fca311"]
+ // let colors = ["blue", "green", "red"]
  console.log(colors[3])
 
 
@@ -60,7 +61,7 @@
 		let startRot = Math.random()*-40 +"deg"
 		let endRot = Math.random()*70 + "deg"
 
-        let randomColor = Math.round(Math.random()*colors)
+        let randomColor = Math.floor(Math.random()*colors.length)
         square.classList.add("confetti")
         square.style.backgroundColor=colors[randomColor]
 

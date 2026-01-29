@@ -43,7 +43,8 @@
 	// function randomPlace(min,max) {
 	// 	const minCeile
 	// }
-
+ let colors = ["blue", "orange", "red", "peachpuff", "white"]
+ console.log(colors[3])
 
 
 	function makeConfets(){
@@ -56,8 +57,13 @@
 		let big= Math.round(Math.random()*30)
 		let rotation = Math.random()*360
 
-		let startRot = Math.random()*-60 +"deg"
+		let startRot = Math.random()*-40 +"deg"
 		let endRot = Math.random()*70 + "deg"
+
+        let randomColor = Math.round(Math.random()*colors)
+        square.classList.add("confetti")
+        square.style.backgroundColor=colors[randomColor]
+
 
 		square.style.setProperty("--startRot", startRot)
 		square.style.setProperty("--endRot", endRot)
@@ -74,7 +80,7 @@
 
 		}
 		setInterval(fall, 1)
-		square.style.backgroundColor = "rgb("+r+", "+g+", "+b+")"
+		// square.style.backgroundColor = "rgb("+r+", "+g+", "+b+")"
 		square.style.width = big+"px"
 		square.style.height = big+"px"
 		square.style.top = Math.random() * window.innerWidth + "px"

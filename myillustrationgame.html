@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inkbound: The Sketchbook Knight</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #f4f1ea; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { display: block; background-color: #fdfbf7; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #555; }
+    </style>
+</head>
+<body>
+
+<div id="loading">Loading Sketchbook...</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+/**
+ * INKBOUND ENGINE V2
+ * Features: Camera System, Kite Physics, Procedural Knight Drawing, "Life Line" UI
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const loading = document.getElementById('loading');
+
+// Resize handling
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+loading.style.display = 'none';
+
+// --- CONFIGURATION ---
+const WORLD_WIDTH = 3000;
+const WORLD_HEIGHT = 1500;
+const GRAVITY = 0.6;
+const KITE_GRAVITY = 0.1; // Very floaty
+const WATER_GRAVITY = 0.1;
+const SPEED = 6;
+const JUMP_FORCE = -14;
+const WATER_LEVEL = 900; // The Y position where water starts
+
+// --- INPUTS ---
+const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+document.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.code)) keys[e.code] = true; });
+document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+
+// --- ART STYLE: THE "JITTER" ENGINE ---
+function rand(min, max) { return Math.random() * (max - min) + min; }
+
+function sketchLine(x1, y1, x2, y2, color = '#333', width = 2) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    
+    let dist = Math.hypot(x2 - x1, y2 - y1);
+    let segments = Math.max(1, Math.floor(dist / 8));
+    
+    for (let i = 1; i <= segments; i++) {
+        let t = i / segments;
+        // Jitter amount based on line length
+        let j = (Math.random() - 0.5) * 1.5; 
+        ctx.lineTo(
+            x1 + (x2 - x1) * t + j,
+            y1 + (y2 - y1) * t + j
+        );
+    }
+    ctx.stroke();
+}
+
+// Helper to draw rough filled shapes
+function sketchFill(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    // Draw multiple overlapping rects for "marker" look
+    ctx.fillRect(x, y, w, h);
+    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+    
+    // Border
+    sketchLine(x, y, x + w, y);
+    sketchLine(x + w, y, x + w, y + h);
+    sketchLine(x + w, y + h, x, y + h);
+    sketchLine(x, y + h, x, y);
+}
+
+// --- GAME CLASSES ---
+
+class Camera {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+    }
+    follow(target) {
+        // Smooth lerp to target
+        let targetX = target.x - canvas.width / 2;
+        let targetY = target.y - canvas.height / 2;
+        
+        // Clamp to world bounds
+        targetX = Math.max(0, Math.min(targetX, WORLD_WIDTH - canvas.width));
+        targetY = Math.max(0, Math.min(targetY, WORLD_HEIGHT - canvas.height));
+
+        this.x += (targetX - this.x) * 0.1;
+        this.y += (targetY - this.y) * 0.1;
+    }
+}
+
+class Player {
+    constructor() {
+        this.x = 100;
+        this.y = 700;
+        this.w = 30; // Hitbox width
+        this.h = 50; // Hitbox height
+        this.dx = 0;
+        this.dy = 0;
+        this.grounded = false;
+        this.facingRight = true;
+        
+        // Stats
+        this.health = 100;
+        this.maxHealth = 100;
+        this.isLaminated = false;
+        
+        // State
+        this.form = "knight"; // knight, kite, squid
+    }
+
+    update() {
+        let inWater = this.y > WATER_LEVEL;
+
+        // --- FORM SELECTION LOGIC ---
+        if (inWater && this.isLaminated) {
+            this.form = "squid";
+        } else if (!this.grounded && keys.ArrowUp && !inWater && this.dy > 0) {
+            // If falling, holding UP, and not in water -> KITE
+            this.form = "kite";
+        } else {
+            this.form = "knight";
+        }
+
+        // --- PHYSICS BASED ON FORM ---
+        
+        // 1. SQUID (Swimming)
+        if (this.form === "squid") {
+            this.w = 40; this.h = 20; // Hitbox change
+            // Movement
+            if (keys.ArrowLeft) this.dx -= 0.5;
+            if (keys.ArrowRight) this.dx += 0.5;
+            if (keys.ArrowUp) this.dy -= 0.5;
+            if (keys.ArrowDown) this.dy += 0.5;
+            
+            // Water Friction
+            this.dx *= 0.9;
+            this.dy *= 0.9;
+            this.dy += WATER_GRAVITY; // Buoyancy-ish
+
+            if (Math.random() > 0.9) particles.push(new Particle(this.x, this.y, "cyan"));
+        }
+        
+        // 2. KITE (Gliding)
+        else if (this.form === "kite") {
+            this.w = 40; this.h = 40;
+            // Air control
+            if (keys.ArrowLeft) this.dx -= 0.3;
+            if (keys.ArrowRight) this.dx += 0.3;
+            
+            // Kite falls very slowly
+            this.dy += KITE_GRAVITY;
+            if (this.dy > 2) this.dy = 2; // Terminal velocity for kite
+            
+            this.dx *= 0.95; // Less friction in air
+        }
+        
+        // 3. KNIGHT (Walking/Running)
+        else {
+            this.w = 30; this.h = 50;
+            // Movement
+            if (keys.ArrowLeft) { this.dx = -SPEED; this.facingRight = false; }
+            if (keys.ArrowRight) { this.dx = SPEED; this.facingRight = true; }
+            
+            // Friction/Stop
+            if (!keys.ArrowLeft && !keys.ArrowRight) this.dx *= 0.8;
+
+            // Jump
+            if (keys.ArrowUp && this.grounded) {
+                this.dy = JUMP_FORCE;
+                this.grounded = false;
+                // Dust particles
+                for(let i=0; i<5; i++) particles.push(new Particle(this.x + 15, this.y + 50, "#8b7e6e"));
+            }
+
+            this.dy += GRAVITY;
+        }
+
+        // --- WATER DAMAGE (If not laminated) ---
+        if (inWater && !this.isLaminated) {
+            this.health -= 0.2;
+            this.dx *= 0.5; // Sluggish
+            if(Math.random()>0.8) particles.push(new Particle(this.x+15, this.y+25, "grey"));
+        }
+
+        // --- APPLY VELOCITY ---
+        this.x += this.dx;
+        this.y += this.dy;
+
+        // --- COLLISION ---
+        this.grounded = false;
+        platforms.forEach(p => {
+            // Simple AABB
+            if (this.x < p.x + p.w && this.x + this.w > p.x &&
+                this.y < p.y + p.h && this.y + this.h > p.y) {
+                
+                // Landing on top
+                if (this.dy > 0 && this.y + this.h - this.dy <= p.y + 10) {
+                    this.y = p.y - this.h;
+                    this.dy = 0;
+                    this.grounded = true;
+                }
+            }
+        });
+
+        // World Bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > WORLD_WIDTH) this.x = WORLD_WIDTH;
+        if (this.y > WORLD_HEIGHT) { this.y = 0; this.health -= 20; } // Fall death
+    }
+
+    draw(camX, camY) {
+        let dx = this.x - camX;
+        let dy = this.y - camY;
+
+        // Flash red if hurt/soggy
+        if (this.y > WATER_LEVEL && !this.isLaminated) ctx.strokeStyle = "red";
+        else ctx.strokeStyle = "#333";
+
+        if (this.form === "knight") {
+            this.drawKnight(dx, dy);
+        } else if (this.form === "kite") {
+            this.drawKite(dx, dy);
+        } else if (this.form === "squid") {
+            this.drawSquid(dx, dy);
+        }
+
+        // Lamination Shine
+        if (this.isLaminated) {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(dx-5, dy-5, this.w+10, this.h+10);
+        }
+    }
+
+    drawKnight(x, y) {
+        let bob = Math.abs(Math.sin(Date.now() / 150)) * 2; // Walking bounce
+        if (!this.grounded) bob = 0;
+
+        // Legs
+        if (Math.abs(this.dx) > 0.1 && this.grounded) {
+             // Walking animation legs
+             let stride = Math.sin(Date.now() / 100) * 5;
+             sketchLine(x + 10, y + 35, x + 10 - stride, y + 50, "#333");
+             sketchLine(x + 20, y + 35, x + 20 + stride, y + 50, "#333");
+        } else {
+             sketchLine(x + 10, y + 35, x + 10, y + 50, "#333");
+             sketchLine(x + 20, y + 35, x + 20, y + 50, "#333");
+        }
+
+        // Body (Armor)
+        sketchRect(x + 5, y + 20 + bob, 20, 20, "#aaa", true); // Chest
+
+        // Head (Helmet)
+        sketchRect(x + 2, y + bob, 26, 22, "#333"); 
+        // Visor
+        sketchLine(x + 8, y + 10 + bob, x + 22, y + 10 + bob, "black"); 
+        
+        // Feather/Plume
+        sketchLine(x + 15, y + bob, x + 25, y - 10 + bob, "red");
+
+        // Cape
+        if (Math.abs(this.dx) > 1) {
+             sketchLine(x + 5, y + 20, x - 10, y + 40 + bob, "red");
+        }
+    }
+
+    drawKite(x, y) {
+        // Diamond Shape
+        ctx.strokeStyle = "orange";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 20, y); // Top
+        ctx.lineTo(x + 40, y + 15); // Right
+        ctx.lineTo(x + 20, y + 40); // Bottom
+        ctx.lineTo(x, y + 15); // Left
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Cross supports
+        sketchLine(x + 20, y, x + 20, y + 40, "orange");
+        sketchLine(x, y + 15, x + 40, y + 15, "orange");
+
+        // Tail
+        let tailWiggle = Math.sin(Date.now() / 50) * 10;
+        sketchLine(x + 20, y + 40, x + 20 + tailWiggle, y + 60, "red");
+    }
+
+    drawSquid(x, y) {
+        // Body
+        ctx.strokeStyle = "#00aaff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Pointy head
+        ctx.moveTo(x + 40, y + 10); 
+        ctx.quadraticCurveTo(x, y - 10, x, y + 20);
+        ctx.quadraticCurveTo(x, y + 30, x + 40, y + 10);
+        ctx.stroke();
+
+        // Tentacles
+        sketchLine(x, y + 5, x - 10, y + 5 + Math.sin(Date.now()/50)*5, "#00aaff");
+        sketchLine(x, y + 15, x - 10, y + 15 + Math.cos(Date.now()/50)*5, "#00aaff");
+    }
+}
+
+class Enemy {
+    constructor(x, y) {
+        this.x = x; 
+        this.y = y; 
+        this.w = 40; this.h = 40;
+        this.start = x;
+        this.dir = 1;
+    }
+    update() {
+        this.x += this.dir * 2;
+        if (this.x > this.start + 150 || this.x < this.start - 150) this.dir *= -1;
+        
+        // Collision with player
+        if (player.x < this.x + this.w && player.x + player.w > this.x &&
+            player.y < this.y + this.h && player.y + player.h > this.y) {
+            player.health -= 2;
+            // Knockback
+            player.dx = -5 * Math.sign(player.x - this.x);
+            player.dy = -5;
+        }
+    }
+    draw(cx, cy) {
+        let x = this.x - cx;
+        let y = this.y - cy;
+        // Scissor Animation
+        let angle = Math.sin(Date.now() / 150) * 0.4;
+        ctx.save();
+        ctx.translate(x + 20, y + 20);
+        
+        // Legs (Walking)
+        if (Math.abs(Math.sin(Date.now()/100)) > 0.5) {
+            sketchLine(-5, 20, -10, 35, "silver");
+            sketchLine(5, 20, 10, 35, "silver");
+        } else {
+            sketchLine(-5, 20, 5, 35, "silver");
+            sketchLine(5, 20, -5, 35, "silver");
+        }
+
+        // Blade 1
+        ctx.rotate(angle);
+        sketchLine(0, 0, 25, -15, "silver", 3);
+        sketchLine(0, 0, -10, 15, "red", 3); // Handle
+        // Blade 2
+        ctx.rotate(-angle * 2);
+        sketchLine(0, 0, 25, 15, "silver", 3);
+        sketchLine(0, 0, -10, -15, "red", 3); // Handle
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.life = 1.0;
+        this.dx = (Math.random() - 0.5) * 4;
+        this.dy = (Math.random() - 0.5) * 4;
+    }
+    update() { this.x += this.dx; this.y += this.dy; this.life -= 0.03; }
+    draw(cx, cy) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x - cx, this.y - cy, 4, 4);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// --- LEVEL GENERATION ---
+
+// Helper for boxes
+function sketchRect(x, y, w, h, color, fill=false) {
+    if (fill) { ctx.fillStyle = color; ctx.fillRect(x,y,w,h); }
+    sketchLine(x,y,x+w,y, color);
+    sketchLine(x+w,y,x+w,y+h, color);
+    sketchLine(x+w,y+h,x,y+h, color);
+    sketchLine(x,y+h,x,y, color);
+}
+
+let player = new Player();
+let camera = new Camera();
+let enemies = [
+    new Enemy(600, 760),
+    new Enemy(1400, 560),
+    new Enemy(2000, 1000) // Underwater enemy
+];
+let particles = [];
+let laminationItem = { x: 2800, y: 150, w: 40, h: 40, collected: false }; // Far away!
+
+// World Platforms (x, y, w, h)
+let platforms = [
+    // --- ZONE 1: STARTING PLAINS ---
+    {x: 0, y: 800, w: 800, h: 50},  // Ground
+    {x: 400, y: 700, w: 100, h: 20},
+    {x: 600, y: 600, w: 100, h: 20},
+
+    // --- ZONE 2: FLOATING ARCHIVES (Requires Kite) ---
+    // You have to climb UP and RIGHT
+    {x: 850, y: 800, w: 200, h: 20},
+    {x: 1200, y: 750, w: 150, h: 20},
+    {x: 1500, y: 650, w: 150, h: 20}, 
+    {x: 1800, y: 500, w: 100, h: 20},
+    {x: 2100, y: 400, w: 100, h: 20},
+    {x: 2400, y: 300, w: 100, h: 20},
+    {x: 2700, y: 200, w: 200, h: 20}, // Item Platform
+
+    // --- ZONE 3: THE DEEP INKWELL (Water) ---
+    // Left side pit
+    {x: -200, y: 0, w: 200, h: 1500}, // Wall
+    {x: 3000, y: 0, w: 200, h: 1500}, // Wall
+    
+    // Water floor
+    {x: 0, y: 1400, w: 3000, h: 100},
+    
+    // Underwater structures
+    {x: 1200, y: 1200, w: 200, h: 20},
+    {x: 1600, y: 1000, w: 200, h: 20},
+];
+
+// --- MAIN LOOP ---
+
+function loop() {
+    // 1. UPDATE
+    player.update();
+    camera.follow(player);
+    
+    enemies.forEach(e => e.update());
+    particles.forEach((p,i) => {
+        p.update();
+        if(p.life <= 0) particles.splice(i,1);
+    });
+
+    // Check Item Collection
+    if (!laminationItem.collected &&
+        player.x < laminationItem.x + laminationItem.w &&
+        player.x + player.w > laminationItem.x &&
+        player.y < laminationItem.y + laminationItem.h &&
+        player.y + player.h > laminationItem.y) {
+        
+        laminationItem.collected = true;
+        player.isLaminated = true;
+        // Sparkle explosion
+        for(let i=0; i<20; i++) particles.push(new Particle(player.x, player.y, "gold"));
+    }
+
+    // 2. DRAW
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Parallax/Background
+    // Draw distant mountains (scenery) fixed relative to camera but slower
+    let bgX = -camera.x * 0.2; 
+    let bgY = -camera.y * 0.2 + 200;
+    sketchLine(bgX, bgY + 400, bgX + 500, bgY + 100, "#e0dcd0", 1);
+    sketchLine(bgX + 400, bgY + 400, bgX + 900, bgY + 50, "#e0dcd0", 1);
+    
+    // Water Background
+    let waterScreenY = WATER_LEVEL - camera.y;
+    if (waterScreenY < canvas.height) {
+        ctx.fillStyle = "rgba(0, 100, 200, 0.15)";
+        ctx.fillRect(0, Math.max(0, waterScreenY), canvas.width, canvas.height);
+        sketchLine(0, waterScreenY, canvas.width, waterScreenY, "blue", 1);
+    }
+
+    // Draw Platforms
+    platforms.forEach(p => {
+        if (p.x - camera.x < canvas.width && p.x + p.w - camera.x > 0) { // Culling
+            sketchRect(p.x - camera.x, p.y - camera.y, p.w, p.h, "#554a3e");
+        }
+    });
+
+    // Draw Item
+    if (!laminationItem.collected) {
+        let ix = laminationItem.x - camera.x;
+        let iy = laminationItem.y - camera.y;
+        sketchFill(ix, iy, 40, 40, "gold");
+        ctx.fillStyle = "black";
+        ctx.fillText("SEAL", ix + 5, iy + 25);
+    }
+
+    // Draw Enemies
+    enemies.forEach(e => e.draw(camera.x, camera.y));
+
+    // Draw Player
+    player.draw(camera.x, camera.y);
+
+    // Draw Particles
+    particles.forEach(p => p.draw(camera.x, camera.y));
+
+    // 3. UI (Life Line)
+    // Draw a long "pencil line" representing health
+    let maxLine = 300;
+    let currentLine = (player.health / player.maxHealth) * maxLine;
+    
+    // Label
+    ctx.font = "bold 20px Courier New";
+    ctx.fillStyle = "#333";
+    ctx.fillText("LIFE LINE:", 20, 40);
+    
+    // The Line
+    let startX = 140; 
+    let startY = 35;
+    // Draw the "empty" faint line
+    sketchLine(startX, startY, startX + maxLine, startY, "#ddd", 2);
+    // Draw the "health" dark line
+    if (player.health > 0) {
+        // As health gets low, make the line wiggle more (shaky hand)
+        let shake = (100 - player.health) * 0.05; 
+        sketchLine(startX, startY + (Math.random()-0.5)*shake, startX + currentLine, startY + (Math.random()-0.5)*shake, "#333", 4);
+    }
+
+    // Context Controls
+    ctx.font = "14px Courier New";
+    ctx.fillStyle = "#888";
+    ctx.fillText("ARROWS to Move | HOLD UP in Air to Kite | DOWN to Dive", 20, canvas.height - 20);
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+</body>
+</html>

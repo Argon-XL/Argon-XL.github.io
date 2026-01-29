@@ -40,9 +40,9 @@
 		function fall(){
 			let Fallfactor = 3
 			square.style.top = parseInt(square.style.top) + Fallfactor + "px"
-			// if(parseInt(square.style.top) > 1000){
-			// 	square.style.top = Math.random() *100 +"px"
-			// }
+			if(parseInt(square.style.top) > 1000){
+				square.style.top = Math.random() *100 +"px"
+			}
 
 		}
 		setInterval(fall, 1)
@@ -53,9 +53,10 @@
 		square.style.left = Math.random() * window.innerWidth + "px"
 		square.style.transform = "rotate(" + rotation + "deg)"
 	}
-setInterval(makeConfets, 80)
-
-
+// setInterval(makeConfets, 80)
+	for(let i = 0; i < 10000; i++){ 
+		makeConfets()
+	}
 
 </script>
 </body>

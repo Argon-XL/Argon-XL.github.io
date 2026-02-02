@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orbital Architect</title>
+    <style>
+        body { margin: 0; background: #050608; overflow: hidden; font-family: 'Georgia', serif; user-select: none; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #aab; transition: opacity 1s; z-index: 10;
+        }
+        h1 { font-size: 50px; font-weight: normal; letter-spacing: 10px; margin: 0 0 20px 0; color: #fff; }
+        p { font-size: 16px; letter-spacing: 2px; color: #667; }
+        .hidden { opacity: 0; pointer-events: none; }
+        #hud {
+            position: absolute; bottom: 30px; left: 30px; color: #556; font-size: 14px; letter-spacing: 2px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1>ORBITAL</h1>
+    <p>CLICK TO INITIALIZE SEQUENCE</p>
+    <p style="font-size: 12px; margin-top: 50px;">(Click & Hold to create Gravity. Guide the Comet.)</p>
+</div>
+
+<div id="hud">SYSTEM STABLE</div>
+<canvas id="canvas"></canvas>
+
+<script>
+/**
+ * THE ENGINE
+ * - Web Audio API for procedural soundtrack
+ * - Canvas API for rendering
+ * - Newtonian Physics for movement
+ */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const hud = document.getElementById('hud');
+
+let width, height;
+let frames = 0;
+
+// Resize handling
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- AUDIO SYSTEM (Procedural) ---
+const AudioEngine = {
+    ctx: null,
+    masterGain: null,
+    droneOsc: null,
+    init: function() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3;
+        this.masterGain.connect(this.ctx.destination);
+
+        // Background Drone
+        this.droneOsc = this.ctx.createOscillator();
+        this.droneOsc.type = 'sine';
+        this.droneOsc.frequency.value = 55; // Low A
+        this.droneOsc.connect(this.masterGain);
+        this.droneOsc.start();
+        
+        // Filter for drone
+        this.filter = this.ctx.createBiquadFilter();
+        this.filter.type = 'lowpass';
+        this.filter.frequency.value = 200;
+        this.droneOsc.disconnect();
+        this.droneOsc.connect(this.filter);
+        this.filter.connect(this.masterGain);
+    },
+    playCollect: function() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+        
+        // Reverb effect (fake echo)
+        const delay = this.ctx.createDelay();
+        delay.delayTime.value = 0.2;
+        const feedback = this.ctx.createGain();
+        feedback.gain.value = 0.3;
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        gain.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(this.masterGain);
+        
+        osc.start();
+        osc.stop(this.ctx.currentTime + 1);
+    },
+    updateDrone: function(speed) {
+        if (!this.droneOsc) return;
+        // Modulate pitch and filter based on speed
+        const targetFreq = 55 + (speed * 2);
+        this.droneOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.1);
+        this.filter.frequency.setTargetAtTime(200 + (speed * 50), this.ctx.currentTime, 0.1);
+    }
+};
+
+// --- GAME STATE ---
+const GAME = {
+    active: false,
+    level: 1,
+    gravityWell: { x: 0, y: 0, active: false, mass: 2000 },
+    mouse: { x: 0, y: 0 },
+    particles: []
+};
+
+// --- CLASSES ---
+
+class Comet {
+    constructor() {
+        this.reset();
+        this.tail = [];
+        for(let i=0; i<20; i++) this.tail.push({x: this.x, y: this.y});
+    }
+
+    reset() {
+        this.x = 100;
+        this.y = height / 2;
+        this.vx = 4;
+        this.vy = -2;
+        this.dead = false;
+        this.fuel = 100;
+    }
+
+    update() {
+        if (this.dead) return;
+
+        // Apply Gravity from Mouse
+        if (GAME.gravityWell.active) {
+            const dx = GAME.gravityWell.x - this.x;
+            const dy = GAME.gravityWell.y - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const force = GAME.gravityWell.mass / (dist * dist); // Newton
+            const angle = Math.atan2(dy, dx);
+            
+            this.vx += Math.cos(angle) * force;
+            this.vy += Math.sin(angle) * force;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Tail Physics (Inverse Kinematics-ish)
+        let targetX = this.x;
+        let targetY = this.y;
+        for(let i=0; i<this.tail.length; i++) {
+            let seg = this.tail[i];
+            let dx = targetX - seg.x;
+            let dy = targetY - seg.y;
+            seg.x += dx * 0.3; // Drag speed
+            seg.y += dy * 0.3;
+            targetX = seg.x;
+            targetY = seg.y;
+        }
+
+        // Bounds (Wrap around)
+        if (this.x < 0) this.x = width;
+        if (this.x > width) this.x = 0;
+        if (this.y < 0) this.y = height;
+        if (this.y > height) this.y = 0;
+
+        // Audio Link
+        const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        AudioEngine.updateDrone(speed);
+    }
+
+    draw() {
+        // Draw Tail
+        ctx.beginPath();
+        if (this.tail.length > 0) ctx.moveTo(this.tail[0].x, this.tail[0].y);
+        for(let i=1; i<this.tail.length; i++) {
+            // Bezier curve for smoothness
+            const xc = (this.tail[i].x + this.tail[i-1].x) / 2;
+            const yc = (this.tail[i].y + this.tail[i-1].y) / 2;
+            ctx.quadraticCurveTo(this.tail[i-1].x, this.tail[i-1].y, xc, yc);
+        }
+        // Gradient Tail
+        const grad = ctx.createLinearGradient(this.x, this.y, this.tail[this.tail.length-1].x, this.tail[this.tail.length-1].y);
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Draw Head
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        // Glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(255,255,255,0.8)';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
+
+class Target {
+    constructor() {
+        this.spawn();
+    }
+    spawn() {
+        this.x = Math.random() * (width - 200) + 100;
+        this.y = Math.random() * (height - 200) + 100;
+        this.radius = 20;
+        this.collected = false;
+        this.pulse = 0;
+    }
+    update() {
+        this.pulse += 0.05;
+    }
+    draw() {
+        if(this.collected) return;
+        const r = this.radius + Math.sin(this.pulse) * 2;
+        
+        // Ethereal Ring
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, r, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)'; // Gold
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Core
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#fdcb6e';
+        ctx.fill();
+        
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#fdcb6e';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
+
+class Dust {
+    constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 1.5;
+        this.a = Math.random();
+    }
+    draw() {
+        ctx.fillStyle = `rgba(255,255,255,${this.a * 0.3})`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+// --- LOGIC ---
+const comet = new Comet();
+const targets = [];
+const dust = [];
+
+for(let i=0; i<100; i++) dust.push(new Dust());
+for(let i=0; i<3; i++) targets.push(new Target());
+
+function checkCollisions() {
+    targets.forEach(t => {
+        if (!t.collected) {
+            const dx = comet.x - t.x;
+            const dy = comet.y - t.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < t.radius + 10) {
+                t.spawn();
+                AudioEngine.playCollect();
+                createExplosion(t.x, t.y);
+                GAME.level++;
+                hud.innerText = "ORBITAL RESONANCE: " + GAME.level;
+            }
+        }
+    });
+}
+
+function createExplosion(x, y) {
+    for(let i=0; i<20; i++) {
+        GAME.particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            life: 1.0
+        });
+    }
+}
+
+// --- INPUT ---
+window.addEventListener('mousedown', (e) => {
+    if (!GAME.active) {
+        GAME.active = true;
+        ui.classList.add('hidden');
+        AudioEngine.init();
+        return;
+    }
+    GAME.gravityWell.active = true;
+});
+
+window.addEventListener('mouseup', () => {
+    GAME.gravityWell.active = false;
+});
+
+window.addEventListener('mousemove', (e) => {
+    GAME.gravityWell.x = e.clientX;
+    GAME.gravityWell.y = e.clientY;
+    GAME.mouse.x = e.clientX;
+    GAME.mouse.y = e.clientY;
+});
+
+// --- RENDER LOOP ---
+function loop() {
+    requestAnimationFrame(loop);
+
+    // Clear with Fade Effect (Trails)
+    ctx.fillStyle = 'rgba(5, 6, 8, 0.2)';
+    ctx.fillRect(0, 0, width, height);
+
+    if (!GAME.active) return;
+
+    // Draw Dust
+    dust.forEach(d => d.draw());
+
+    // Update Entities
+    comet.update();
+    targets.forEach(t => { t.update(); t.draw(); });
+    checkCollisions();
+
+    // Draw Gravity Well (Cursor)
+    if (GAME.gravityWell.active) {
+        ctx.beginPath();
+        ctx.arc(GAME.gravityWell.x, GAME.gravityWell.y, 40, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(GAME.gravityWell.x, GAME.gravityWell.y, 10, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fill();
+        
+        // Connection Line
+        ctx.beginPath();
+        ctx.moveTo(GAME.gravityWell.x, GAME.gravityWell.y);
+        ctx.lineTo(comet.x, comet.y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.stroke();
+    } else {
+        // Passive Cursor
+        ctx.beginPath();
+        ctx.arc(GAME.mouse.x, GAME.mouse.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#556';
+        ctx.fill();
+    }
+
+    comet.draw();
+
+    // Draw Particles
+    GAME.particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy;
+        p.life -= 0.02;
+        ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`;
+        ctx.fillRect(p.x, p.y, 2, 2);
+        if(p.life <= 0) GAME.particles.splice(i, 1);
+    });
+}
+
+loop();
+
+</script>
+</body>
+</html>

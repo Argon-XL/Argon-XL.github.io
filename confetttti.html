@@ -39,6 +39,9 @@
 	</style>
 </head>
 <body>
+    <button id="btn">drop Confetti</button>
+<input type="range" min="1" max="10" id="slider" step="1">
+    <input type="color" value="#ff0000" id="colorPicker">
 <script type="text/javascript">
 	// function randomPlace(min,max) {
 	// 	const minCeile
@@ -46,7 +49,10 @@
  let colors = ["#457b9d", "#a8dadc", "#e9edc9", "#cdb4db", "#fca311"]
  // let colors = ["blue", "green", "red"]
  console.log(colors[3])
-
+let colorpicker = document.getElementById("colorPicker")
+console.log(colorpicker.value)
+ let dropConfettiBtn = document.getElementById("btn")
+let slider = document.getElementById("slider")
 
 	function makeConfets(){
 		let square = document.createElement("div")
@@ -63,7 +69,8 @@
 
         let randomColor = Math.floor(Math.random()*colors.length)
         square.classList.add("confetti")
-        square.style.backgroundColor=colors[randomColor]
+        // square.style.backgroundColor=colors[randomColor]
+        square.style.backgroundColor=colorpicker.value
 
 
 		square.style.setProperty("--startRot", startRot)
@@ -88,9 +95,14 @@
 		square.style.left = Math.random() * window.innerWidth + "px"
 		square.style.transform = "rotate(" + rotation + "deg)"
 	}
-setInterval(makeConfets, 80)
+// setInterval(makeConfets, 80)
 
-
+dropConfettiBtn.addEventListener("click", function(){
+console.log("unaclick")
+    for (let i = 0; i < slider.value; i++) {
+        makeConfets()
+    }
+})
 
 </script>
 </body>

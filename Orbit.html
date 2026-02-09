@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orbital Architect: Complete</title>
+    <style>
+        body { margin: 0; background: #050608; overflow: hidden; font-family: 'Georgia', serif; user-select: none; }
+        canvas { display: block; }
+        
+        /* UI OVERLAY */
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1s; z-index: 20;
+            background: rgba(5, 6, 8, 0.95);
+        }
+        h1 { font-size: 50px; font-weight: normal; letter-spacing: 10px; margin: 0 0 40px 0; color: #fff; }
+        
+        /* MENU BUTTONS */
+        .menu-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 15px 40px;
+            margin: 10px;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 200px;
+            text-align: center;
+        }
+        .menu-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #fff;
+            letter-spacing: 5px;
+        }
+
+        /* EXIT BUTTON */
+        #btn-exit {
+            position: absolute; top: 30px; right: 30px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.6);
+            padding: 8px 15px; font-family: 'Georgia', serif;
+            font-size: 11px; letter-spacing: 2px;
+            cursor: pointer; z-index: 100; transition: 0.3s;
+        }
+        #btn-exit:hover {
+            border-color: #fff; color: #fff; background: rgba(255,255,255,0.1);
+        }
+
+        /* SHOP BUTTON */
+        #btn-shop {
+            border-color: #d4af37;
+            color: #d4af37;
+            margin-top: 30px;
+        }
+        #btn-shop:hover {
+            background: rgba(212, 175, 55, 0.1);
+            text-shadow: 0 0 10px #d4af37;
+            letter-spacing: 5px;
+        }
+
+        /* SHOP MENU OVERLAY */
+        #shop-ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(10, 12, 15, 0.98);
+            z-index: 30;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        #shop-ui.active { opacity: 1; pointer-events: all; }
+
+        .shop-header { color: #d4af37; font-size: 30px; letter-spacing: 5px; margin-bottom: 20px; }
+        .currency-display { color: #fff; font-size: 18px; margin-bottom: 40px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        .upgrade-container { display: flex; gap: 30px; margin-bottom: 50px; }
+        
+        .upgrade-card {
+            border: 1px solid #334;
+            background: rgba(255,255,255,0.02);
+            padding: 20px;
+            width: 250px;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .upgrade-card h3 { color: #aab; font-size: 16px; margin: 0 0 10px 0; letter-spacing: 2px; }
+        .upgrade-card p { color: #667; font-size: 12px; height: 40px; }
+        .upgrade-btn {
+            background: #223;
+            border: 1px solid #445;
+            color: #fff;
+            padding: 10px 20px;
+            margin-top: 15px;
+            cursor: pointer;
+            width: 100%;
+            font-family: 'Georgia';
+        }
+        .upgrade-btn:hover { background: #d4af37; color: #000; border-color: #d4af37; }
+        .upgrade-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #222; color: #555; border-color: #333; }
+
+        .current-level { font-size: 10px; color: #556; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        p { font-size: 14px; letter-spacing: 2px; color: #667; margin-top: 30px;}
+        .hidden { opacity: 0; pointer-events: none; }
+        
+        /* HUD ELEMENTS */
+        #hud {
+            position: absolute; bottom: 30px; left: 30px; color: #556; font-size: 14px; letter-spacing: 2px;
+            pointer-events: none; z-index: 10;
+        }
+
+        #speed-display {
+            position: absolute; bottom: 30px; right: 30px; 
+            color: #556; font-size: 14px; letter-spacing: 2px;
+            pointer-events: none; text-align: right; font-feature-settings: "tnum"; font-variant-numeric: tabular-nums;
+            z-index: 10;
+        }
+        #speed-val { color: #889; font-weight: bold; }
+        
+        /* LEVEL UP TEXT */
+        #level-text {
+            position: absolute; top: 40%; left: 0; width: 100%;
+            text-align: center; font-size: 40px; color: #fff; letter-spacing: 10px;
+            pointer-events: none; opacity: 0; transition: opacity 3s;
+            text-shadow: 0 0 20px #fff; z-index: 15;
+        }
+
+        .floating-text {
+            position: absolute;
+            color: #0ff;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;"> <button id="btn-exit" class="hidden">EXIT SYSTEM</button>
+<div id="level-text">LEVEL 1</div>
+
+<div id="ui">
+    <h1>ORBITAL</h1>
+    <div style="display:flex; flex-direction:column; align-items: center;">
+        <button class="menu-btn" id="btn-survival">SURVIVAL</button>
+        <button class="menu-btn" id="btn-zen">ぜん</button>
+        <button class="menu-btn" id="btn-shop">SHOP</button>
+    </div>
+    <p>LEFT CLICK: ATTRACT | RIGHT CLICK: REPEL (IF UNLOCKED)</p>
+</div>
+
+<div id="shop-ui">
+    <div class="shop-header">STARFIRE EXCHANGE</div>
+    <div class="currency-display">BALANCE: <span id="shop-balance">0</span> STARFIRE</div>
+
+    <div class="upgrade-container">
+        <div class="upgrade-card">
+            <h3>GRAVIMETRIC CONDENSER</h3>
+            <p>Compresses the gravity well visual by 8% per level.</p>
+            <div class="current-level">Level: <span id="lvl-cursor">0</span></div>
+            <button class="upgrade-btn" id="buy-cursor" onclick="ShopSystem.buyUpgrade('cursor')">
+                UPGRADE
+            </button>
+        </div>
+
+        <div class="upgrade-card">
+            <h3>SINGULARITY DEPTH</h3>
+            <p>Increases gravitational mass and pull force by 7%.</p>
+            <div class="current-level">Level: <span id="lvl-gravity">0</span></div>
+            <button class="upgrade-btn" id="buy-gravity" onclick="ShopSystem.buyUpgrade('gravity')">
+                UPGRADE
+            </button>
+        </div>
+
+        <div class="upgrade-card" style="border-color: #f33;">
+            <h3>DARK MATTER PULSE</h3>
+            <p>Unlock Right-Click to REPEL the comet instead of attract.</p>
+            <div class="current-level" style="color:#f88">UNIQUE UPGRADE</div>
+            <button class="upgrade-btn" id="buy-repulse" onclick="ShopSystem.buyUpgrade('repulse')">
+                UNLOCK (200 SF)
+            </button>
+        </div>
+    </div>
+
+    <button class="menu-btn" onclick="ShopSystem.closeShop()">RETURN</button>
+</div>
+
+<div id="hud">SYSTEM STABLE</div>
+<div id="speed-display">VELOCITY: <span id="speed-val">0</span> km/s</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const shopUi = document.getElementById('shop-ui');
+const hud = document.getElementById('hud');
+const speedVal = document.getElementById('speed-val');
+const btnSurvival = document.getElementById('btn-survival');
+const btnZen = document.getElementById('btn-zen');
+const btnShop = document.getElementById('btn-shop');
+const btnExit = document.getElementById('btn-exit');
+const levelText = document.getElementById('level-text');
+
+let width, height;
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- HELPERS ---
+function createFloatingText(x, y, text, color = '#0ff') {
+    const el = document.createElement('div');
+    el.className = 'floating-text';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.color = color;
+    el.style.textShadow = `0 0 10px ${color}`;
+    el.innerText = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+function showLevelText(text) {
+    levelText.innerText = text;
+    levelText.style.opacity = 1;
+    setTimeout(() => { levelText.style.opacity = 0; }, 3000);
+}
+
+// CONSTELLATION NAMES
+const CONSTELLATION_NAMES = [
+    "THE SERPENT", "THE ANVIL", "THE CROWN", "THE VOID", "THE ARROW",
+    "THE CHALICE", "THE WOLF", "THE LYRE", "THE SHIELD", "IGNIS", 
+    "AETERNA", "CAELUM", "UMBRA", "VENTUS", "LUX"
+];
+
+// --- SHOP & DATA SYSTEM ---
+const ShopSystem = {
+    data: {
+        starfire: 0,
+        upgrades: {
+            cursor: 0,
+            gravity: 0,
+            repulse: false
+        }
+    },
+    
+    init: function() {
+        const saved = localStorage.getItem('orbital_save_v2'); 
+        if (saved) {
+            this.data = JSON.parse(saved);
+        }
+        this.updateUI();
+    },
+
+    save: function() {
+        localStorage.setItem('orbital_save_v2', JSON.stringify(this.data));
+    },
+
+    openShop: function() {
+        ui.classList.add('hidden');
+        shopUi.classList.add('active');
+        this.updateUI();
+    },
+
+    closeShop: function() {
+        shopUi.classList.remove('active');
+        ui.classList.remove('hidden');
+    },
+
+    addCurrency: function(amount) {
+        this.data.starfire += amount;
+        this.save();
+    },
+
+    buyUpgrade: function(type) {
+        let cost = 0;
+        
+        if (type === 'cursor') cost = 20;
+        if (type === 'gravity') cost = 10 + this.data.upgrades.gravity;
+        if (type === 'repulse') cost = 200;
+
+        if (this.data.starfire >= cost) {
+            if (type === 'cursor' && this.data.upgrades.cursor >= 10) return;
+            if (type === 'repulse' && this.data.upgrades.repulse) return;
+
+            this.data.starfire -= cost;
+            
+            if (type === 'repulse') this.data.upgrades.repulse = true;
+            else this.data.upgrades[type]++;
+            
+            this.save();
+            this.updateUI();
+        }
+    },
+
+    updateUI: function() {
+        document.getElementById('shop-balance').innerText = this.data.starfire;
+        document.getElementById('lvl-cursor').innerText = this.data.upgrades.cursor;
+        document.getElementById('lvl-gravity').innerText = this.data.upgrades.gravity;
+
+        const cursorBtn = document.getElementById('buy-cursor');
+        const gravBtn = document.getElementById('buy-gravity');
+        const repulseBtn = document.getElementById('buy-repulse');
+        
+        const cursorCost = 20;
+        const gravCost = 10 + this.data.upgrades.gravity;
+
+        // Cursor
+        if (this.data.upgrades.cursor >= 10) cursorBtn.innerText = "MAX LEVEL";
+        else cursorBtn.innerText = `UPGRADE (${cursorCost} SF)`;
+        cursorBtn.disabled = this.data.starfire < cursorCost || this.data.upgrades.cursor >= 10;
+        
+        // Gravity
+        gravBtn.innerText = `UPGRADE (${gravCost} SF)`;
+        gravBtn.disabled = this.data.starfire < gravCost;
+
+        // Repulse
+        if (this.data.upgrades.repulse) {
+            repulseBtn.innerText = "UNLOCKED";
+            repulseBtn.disabled = true;
+            repulseBtn.style.background = "#242";
+            repulseBtn.style.color = "#4f4";
+        } else {
+            repulseBtn.innerText = "UNLOCK (200 SF)";
+            repulseBtn.disabled = this.data.starfire < 200;
+        }
+    },
+
+    getCursorRadius: function() {
+        const pct = Math.max(0.2, 1 - (this.data.upgrades.cursor * 0.08));
+        return 40 * pct;
+    },
+
+    getGravityMass: function() {
+        return 2000 * (1 + (this.data.upgrades.gravity * 0.07));
+    },
+
+    hasRepulse: function() {
+        return this.data.upgrades.repulse;
+    }
+};
+
+ShopSystem.init();
+
+// --- AUDIO SYSTEM ---
+const AudioEngine = {
+    ctx: null, masterGain: null, droneOsc: null,
+    init: function() {
+        if(this.ctx) return; 
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3;
+        this.masterGain.connect(this.ctx.destination);
+
+        this.droneOsc = this.ctx.createOscillator();
+        this.droneOsc.type = 'sine';
+        this.droneOsc.frequency.value = 55; 
+        this.droneOsc.connect(this.masterGain);
+        this.droneOsc.start();
+        
+        this.filter = this.ctx.createBiquadFilter();
+        this.filter.type = 'lowpass';
+        this.filter.frequency.value = 200;
+        this.droneOsc.disconnect();
+        this.droneOsc.connect(this.filter);
+        this.filter.connect(this.masterGain);
+    },
+    playCollect: function() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.5); 
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 1);
+    },
+    playDamage: function() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.4);
+    },
+    playBoost: function() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+    },
+    playConstellation: function() {
+         if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(554, this.ctx.currentTime + 0.1); 
+        osc.frequency.setValueAtTime(659, this.ctx.currentTime + 0.2); 
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 1.2);
+    },
+    updateDrone: function(speed) {
+        if (!this.droneOsc) return;
+        const targetFreq = 55 + (speed * 2);
+        this.droneOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.1);
+        this.filter.frequency.setTargetAtTime(200 + (speed * 50), this.ctx.currentTime, 0.1);
+    }
+};
+
+// --- GAME STATE ---
+const GAME = {
+    active: false,
+    mode: 'survival',
+    lives: 3,
+    level: 1, // Start at level 1
+    sessionStarfire: 0, 
+    gravityWell: { x: 0, y: 0, active: false, mass: 2000, type: 'pull' }, // 'pull' or 'push'
+    mouse: { x: 0, y: 0 },
+    entropy: 0, 
+    particles: [],
+    ignitedStars: [],
+    constellations: [],
+    rogueStars: [],
+    asteroids: [],
+    nebulae: [],
+    
+    // Timer System
+    timeElapsed: 0,
+    eventInterval: 90 * 60, // 90 seconds * 60 frames
+    currentEvent: 'none', // 'none', 'wind', 'asteroids'
+};
+
+// Buttons
+btnSurvival.addEventListener('click', () => startGame('survival'));
+btnZen.addEventListener('click', () => startGame('zen'));
+btnShop.addEventListener('click', () => ShopSystem.openShop());
+btnExit.addEventListener('click', () => returnToMenu());
+
+let targets = [];
+
+function startGame(mode) {
+    GAME.mode = mode;
+    GAME.active = true;
+    resetGame();
+    ui.classList.add('hidden');
+    btnExit.classList.remove('hidden');
+    AudioEngine.init();
+    
+    if(mode === 'survival') showLevelText("LEVEL 1");
+}
+
+function returnToMenu() {
+    GAME.active = false;
+    ui.classList.remove('hidden');
+    btnExit.classList.add('hidden');
+    hud.innerText = "SYSTEM STABLE";
+    if (GAME.sessionStarfire > 0) {
+        ShopSystem.addCurrency(GAME.sessionStarfire);
+        GAME.sessionStarfire = 0;
+    }
+}
+
+function resetGame() {
+    GAME.lives = 3;
+    GAME.level = 1;
+    GAME.entropy = 0;
+    GAME.sessionStarfire = 0;
+    GAME.particles = [];
+    GAME.ignitedStars = [];
+    GAME.rogueStars = [];
+    GAME.asteroids = [];
+    GAME.nebulae = [];
+    GAME.constellations = [];
+    
+    GAME.timeElapsed = 0;
+    GAME.currentEvent = 'none';
+    
+    GAME.gravityWell.mass = ShopSystem.getGravityMass();
+    
+    comet.reset();
+    
+    targets = [new Target(), new Target()];
+    for(let i=0; i<3; i++) GAME.nebulae.push(new Nebula());
+    
+    if (GAME.mode === 'zen') hud.innerText = "ZEN MODE // INFINITE";
+    else hud.innerText = "SYSTEM REBOOTED";
+}
+
+function gameOver() {
+    GAME.active = false;
+    ui.classList.remove('hidden');
+    btnExit.classList.add('hidden');
+    hud.innerText = "SIGNAL LOST";
+    if (GAME.sessionStarfire > 0) {
+        ShopSystem.addCurrency(GAME.sessionStarfire);
+        hud.innerText = `SIGNAL LOST. ${GAME.sessionStarfire} STARFIRE BANKED.`;
+        GAME.sessionStarfire = 0;
+    }
+}
+
+// --- CLASSES ---
+
+class Nebula {
+    constructor() { this.spawn(); }
+    spawn() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.radius = Math.random() * 100 + 100;
+        this.blobs = [];
+        for(let i=0; i<5; i++) {
+            this.blobs.push({
+                dx: (Math.random() - 0.5) * this.radius,
+                dy: (Math.random() - 0.5) * this.radius,
+                r: Math.random() * 50 + 30
+            });
+        }
+        this.life = Math.random() * 500 + 500;
+        this.maxAlpha = 0.15;
+        this.alpha = 0;
+        this.state = 'fadingIn'; 
+    }
+    update() {
+        if (this.state === 'fadingIn') {
+            this.alpha += 0.002;
+            if (this.alpha >= this.maxAlpha) this.state = 'active';
+        } else if (this.state === 'active') {
+            this.life--;
+            if (this.life <= 0) this.state = 'fadingOut';
+        } else if (this.state === 'fadingOut') {
+            this.alpha -= 0.002;
+            if (this.alpha <= 0) this.spawn(); 
+        }
+    }
+    draw() {
+        ctx.fillStyle = `rgba(60, 20, 100, ${this.alpha})`;
+        this.blobs.forEach(b => {
+            ctx.beginPath();
+            ctx.arc(this.x + b.dx, this.y + b.dy, b.r, 0, Math.PI*2);
+            ctx.fill();
+        });
+    }
+    checkFriction(comet) {
+        if (this.state !== 'active' && this.state !== 'fadingIn') return false;
+        if (comet.buffed) return false; 
+        const dx = comet.x - this.x;
+        const dy = comet.y - this.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < this.radius) {
+            comet.vx *= 0.96; comet.vy *= 0.96;
+            if (Math.random() > 0.8) {
+                GAME.particles.push({
+                    x: comet.x, y: comet.y, vx: 0, vy: 0, life: 0.5, color: '#f0f'
+                });
+            }
+            return true;
+        }
+        return false;
+    }
+}
+
+class Constellation {
+    constructor(stars) {
+        this.stars = stars;
+        this.name = CONSTELLATION_NAMES[Math.floor(Math.random() * CONSTELLATION_NAMES.length)];
+        this.alpha = 0;
+        let sx = 0, sy = 0;
+        stars.forEach(s => { sx += s.x; sy += s.y; });
+        this.cx = sx / stars.length;
+        this.cy = sy / stars.length;
+        AudioEngine.playConstellation();
+    }
+    draw() {
+        if (this.alpha < 1) this.alpha += 0.01;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${this.alpha * 0.4})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.stars[0].x, this.stars[0].y);
+        for(let i=1; i<this.stars.length; i++) {
+            ctx.lineTo(this.stars[i].x, this.stars[i].y);
+        }
+        if (this.stars.length > 2) ctx.lineTo(this.stars[0].x, this.stars[0].y);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(150, 150, 200, ${this.alpha * 0.8})`;
+        ctx.font = '10px Georgia';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.cx, this.cy + 20);
+    }
+    checkBuff(comet) {
+        const dist = Math.sqrt((comet.x - this.cx)**2 + (comet.y - this.cy)**2);
+        return dist < 150;
+    }
+}
+
+class RogueStar {
+    constructor() { this.reset(); }
+    reset() {
+        this.grazed = false; 
+        if (Math.random() > 0.5) {
+            this.x = Math.random() > 0.5 ? -50 : width + 50;
+            this.y = Math.random() * height;
+        } else {
+            this.x = Math.random() * width;
+            this.y = Math.random() > 0.5 ? -50 : height + 50;
+        }
+        const angle = Math.atan2(height/2 - this.y, width/2 - this.x);
+        this.vx = Math.cos(angle) * (Math.random() * 0.5 + 0.2);
+        this.vy = Math.sin(angle) * (Math.random() * 0.5 + 0.2);
+        this.radius = 15;
+        this.mass = 800;
+        this.pulse = 0;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.pulse += 0.1;
+        if (this.x < -100 || this.x > width + 100 || this.y < -100 || this.y > height + 100) this.reset();
+    }
+    draw() {
+        const r = this.radius + Math.sin(this.pulse) * 2;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#f33';
+        ctx.beginPath(); ctx.arc(this.x, this.y, 8, 0, Math.PI*2);
+        ctx.fillStyle = '#f33'; ctx.fill(); ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.3)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI*2); ctx.stroke();
+    }
+}
+
+class Asteroid {
+    constructor() {
+        // Spawn from top or left
+        if(Math.random() > 0.5) {
+            this.x = Math.random() * width;
+            this.y = -50;
+        } else {
+            this.x = -50;
+            this.y = Math.random() * height * 0.5; // Top half mostly
+        }
+        
+        // Slant trajectory
+        this.vx = Math.random() * 3 + 2; 
+        this.vy = Math.random() * 3 + 2;
+        this.size = Math.random() * 10 + 10;
+        this.rotation = 0;
+        this.rSpeed = Math.random() * 0.1 - 0.05;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.rotation += this.rSpeed;
+    }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = '#777';
+        ctx.beginPath();
+        // Rough shape
+        ctx.moveTo(-this.size, -this.size);
+        ctx.lineTo(this.size, -this.size/2);
+        ctx.lineTo(this.size/2, this.size);
+        ctx.lineTo(-this.size, this.size/2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class IgnitedStar {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.alpha = 0;
+        this.maxAlpha = Math.random() * 0.5 + 0.5;
+        this.size = Math.random() * 2 + 1;
+        this.hasConstellation = false; 
+    }
+    draw() {
+        if (this.alpha < this.maxAlpha) this.alpha += 0.02;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`; ctx.fill();
+        if (Math.random() > 0.99) {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#fff'; ctx.fill(); ctx.shadowBlur = 0;
+        }
+    }
+}
+
+class Comet {
+    constructor() {
+        this.reset();
+        this.tail = [];
+        for(let i=0; i<20; i++) this.tail.push({x: this.x, y: this.y});
+    }
+    reset() {
+        this.x = 100; this.y = height / 2;
+        this.vx = 4; this.vy = -2;
+        this.invulnerable = 0;
+        this.buffed = false; 
+        this.boostColor = 0; 
+    }
+    takeDamage() {
+        if (this.invulnerable > 0) return;
+        GAME.lives--;
+        createExplosion(this.x, this.y, 10, '#f00');
+        AudioEngine.playDamage();
+        this.invulnerable = 100; 
+        if (GAME.lives <= 0) gameOver();
+    }
+    applyTidalBoost() {
+        this.vx *= 1.3; this.vy *= 1.3;
+        this.boostColor = 20; AudioEngine.playBoost();
+        createFloatingText(this.x, this.y, "GRAVITY ASSIST");
+    }
+    update() {
+        if (this.invulnerable > 0) this.invulnerable--;
+        if (this.boostColor > 0) this.boostColor--;
+        
+        this.buffed = false; 
+        GAME.constellations.forEach(c => { if(c.checkBuff(this)) this.buffed = true; });
+
+        // Player Gravity
+        if (GAME.gravityWell.active) {
+            const dx = GAME.gravityWell.x - this.x;
+            const dy = GAME.gravityWell.y - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const force = GAME.gravityWell.mass / (dist * dist); 
+            const angle = Math.atan2(dy, dx);
+            
+            // PULL or PUSH
+            if (GAME.gravityWell.type === 'push') {
+                this.vx -= Math.cos(angle) * force * 1.5; // Push is stronger
+                this.vy -= Math.sin(angle) * force * 1.5;
+            } else {
+                this.vx += Math.cos(angle) * force;
+                this.vy += Math.sin(angle) * force;
+            }
+        }
+
+        // Rogue Star Logic (Survival)
+        if (GAME.mode === 'survival') {
+            GAME.rogueStars.forEach(star => {
+                const dx = star.x - this.x; const dy = star.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < star.radius + 5) {
+                    this.takeDamage();
+                    const angle = Math.atan2(dy, dx);
+                    this.vx -= Math.cos(angle) * 5; this.vy -= Math.sin(angle) * 5;
+                } else if (dist < 80 && !star.grazed) {
+                    star.grazed = true;
+                    this.applyTidalBoost();
+                }
+                if (dist < 300) {
+                    const force = star.mass / (dist * dist);
+                    const angle = Math.atan2(dy, dx);
+                    this.vx += Math.cos(angle) * force;
+                    this.vy += Math.sin(angle) * force;
+                }
+            });
+
+            // Asteroid Collision
+            for(let i = GAME.asteroids.length - 1; i >= 0; i--) {
+                let a = GAME.asteroids[i];
+                const dx = a.x - this.x; const dy = a.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < a.size + 5) {
+                    this.takeDamage();
+                    GAME.asteroids.splice(i, 1); // Destroy asteroid
+                    createExplosion(a.x, a.y, 5, '#888');
+                }
+            }
+        }
+
+        GAME.nebulae.forEach(neb => neb.checkFriction(this));
+
+        // Drag Physics
+        let speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        if (speed > 0) {
+            speed -= 0.0;
+            if (speed < 0) speed = 0;
+            const angle = Math.atan2(this.vy, this.vx);
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+        }
+
+        // Solar Wind Physics
+        if (GAME.currentEvent === 'wind') {
+            this.vx += 0.04; // Gentle push to right
+        }
+
+        this.x += this.vx; this.y += this.vy;
+
+        // Tail
+        let targetX = this.x; let targetY = this.y;
+        for(let i=0; i<this.tail.length; i++) {
+            let seg = this.tail[i];
+            let dx = targetX - seg.x; let dy = targetY - seg.y;
+            seg.x += dx * 0.3; seg.y += dy * 0.3;
+            targetX = seg.x; targetY = seg.y;
+        }
+
+        if (this.x < 0) this.x = width;
+        if (this.x > width) this.x = 0;
+        if (this.y < 0) this.y = height;
+        if (this.y > height) this.y = 0;
+
+        speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        AudioEngine.updateDrone(speed);
+        speedVal.innerText = (speed * 100).toFixed(0);
+        if(this.buffed) speedVal.style.color = '#aaf';
+        else speedVal.style.color = '#889';
+    }
+
+    draw() {
+        if (this.invulnerable > 0 && Math.floor(this.invulnerable / 5) % 2 === 0) return;
+
+        ctx.beginPath();
+        if (this.tail.length > 0) ctx.moveTo(this.tail[0].x, this.tail[0].y);
+        for(let i=1; i<this.tail.length; i++) {
+            const xc = (this.tail[i].x + this.tail[i-1].x) / 2;
+            const yc = (this.tail[i].y + this.tail[i-1].y) / 2;
+            ctx.quadraticCurveTo(this.tail[i-1].x, this.tail[i-1].y, xc, yc);
+        }
+        const grad = ctx.createLinearGradient(this.x, this.y, this.tail[this.tail.length-1].x, this.tail[this.tail.length-1].y);
+        
+        if (this.boostColor > 0) grad.addColorStop(0, '#0ff');
+        else if (this.buffed) grad.addColorStop(0, '#aaf');
+        else grad.addColorStop(0, '#fff');
+        
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.strokeStyle = grad; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
+
+        ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = (this.boostColor > 0) ? '#0ff' : (this.buffed ? '#aaf' : '#fff');
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = (this.boostColor > 0) ? 'rgba(0,255,255,0.8)' : 'rgba(255,255,255,0.8)';
+        ctx.fill(); ctx.shadowBlur = 0;
+    }
+}
+
+class Target {
+    constructor() { this.spawn(); this.state = 'active'; this.grazed = false; }
+    spawn() {
+        this.x = Math.random() * (width - 200) + 100;
+        this.y = Math.random() * (height - 200) + 100;
+        this.baseRadius = 20; this.currentRadius = 20; this.pulse = 0;
+        this.state = 'active'; this.grazed = false;
+    }
+    triggerCollapse() {
+        this.state = 'expanding';
+        createExplosion(this.x, this.y, 5, '#fdcb6e'); 
+    }
+    update() {
+        if (this.state === 'active' && !this.grazed) {
+             const dist = Math.sqrt((comet.x - this.x)**2 + (comet.y - this.y)**2);
+             if (dist > this.currentRadius + 10 && dist < this.currentRadius + 60) {
+                 this.grazed = true; comet.applyTidalBoost();
+             }
+        }
+        if (this.state === 'active') {
+            this.pulse += 0.05; this.currentRadius = this.baseRadius + Math.sin(this.pulse) * 2;
+        } 
+        else if (this.state === 'expanding') {
+            this.currentRadius += 4;
+            if (this.currentRadius > 60) this.state = 'contracting';
+        } 
+        else if (this.state === 'contracting') {
+            this.currentRadius *= 0.8; 
+            if (this.currentRadius < 1) {
+                const newStar = new IgnitedStar(this.x, this.y);
+                GAME.ignitedStars.push(newStar);
+                checkConstellations(newStar); 
+                if (GAME.mode === 'survival') {
+                    GAME.entropy = Math.max(0, GAME.entropy - 25);
+                    GAME.sessionStarfire++;
+                    createFloatingText(this.x, this.y - 20, "+1 SF", "#fdcb6e");
+                    
+                    // --- REINTEGRATED ROGUE STARS ---
+                    // Every 3 stars ignited, a Rogue Star appears.
+                    if (GAME.ignitedStars.length % 3 === 0) {
+                         GAME.rogueStars.push(new RogueStar());
+                         createFloatingText(this.x, this.y - 50, "*", "#f33");
+                    }
+                }
+                
+                hud.innerText = "STARS IGNITED: " + GAME.ignitedStars.length;
+                this.spawn(); 
+            }
+        }
+    }
+    draw() {
+        if (this.state === 'contracting') {
+             ctx.beginPath(); ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI*2);
+             ctx.fillStyle = '#000'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+             ctx.fill(); ctx.stroke(); return;
+        }
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI*2);
+        if (this.state === 'expanding') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; } 
+        else { ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)'; ctx.lineWidth = 1; }
+        ctx.stroke();
+        if (this.state === 'active') {
+            ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = '#fdcb6e'; ctx.shadowBlur = 20; ctx.shadowColor = '#fdcb6e';
+            ctx.fill(); ctx.shadowBlur = 0;
+        }
+    }
+}
+
+class Dust {
+    constructor() {
+        this.x = Math.random() * width; this.y = Math.random() * height;
+        this.size = Math.random() * 1.5; this.a = Math.random();
+    }
+    draw() {
+        ctx.fillStyle = `rgba(255,255,255,${this.a * 0.3})`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+// --- LOGIC ---
+
+function checkConstellations(newStar) {
+    const range = 250;
+    const neighbors = GAME.ignitedStars.filter(s => 
+        s !== newStar && !s.hasConstellation && Math.sqrt((s.x - newStar.x)**2 + (s.y - newStar.y)**2) < range
+    );
+    if (neighbors.length >= 2) {
+        const squad = neighbors.slice(0, 4);
+        squad.push(newStar);
+        squad.forEach(s => s.hasConstellation = true);
+        GAME.constellations.push(new Constellation(squad));
+        createFloatingText(newStar.x, newStar.y - 30, "CONSTELLATION FORMED", "#fff");
+    }
+}
+
+const comet = new Comet();
+const dust = [];
+for(let i=0; i<100; i++) dust.push(new Dust());
+
+function checkCollisions() {
+    targets.forEach(t => {
+        if (t.state === 'active') {
+            const dx = comet.x - t.x; const dy = comet.y - t.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < t.currentRadius + 10) {
+                t.triggerCollapse();
+                AudioEngine.playCollect();
+            }
+        }
+    });
+}
+
+function createExplosion(x, y, speed, color) {
+    for(let i=0; i<15; i++) {
+        GAME.particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            life: 1.0,
+            color: color
+        });
+    }
+}
+
+function drawLives() {
+    if (GAME.mode === 'zen') return; 
+    const startX = 40; const startY = 40; const spacing = 20;
+    ctx.beginPath(); ctx.moveTo(startX, startY);
+    ctx.lineTo(startX + spacing * 2, startY + spacing * 0.5); 
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+
+    for(let i=0; i<3; i++) {
+        if (i < GAME.lives) {
+            ctx.beginPath(); ctx.arc(startX + i * spacing, startY + i * (spacing * 0.25), 4, 0, Math.PI*2);
+            ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowBlur = 10; ctx.shadowColor = '#aaf'; ctx.fill(); ctx.shadowBlur = 0;
+        } else {
+            ctx.beginPath(); ctx.arc(startX + i * spacing, startY + i * (spacing * 0.25), 2, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill();
+        }
+    }
+}
+
+// --- INPUT ---
+// LEFT CLICK (Attract)
+window.addEventListener('mousedown', (e) => { 
+    if(!GAME.active) return;
+    if(e.button === 0) { // Left Click
+        GAME.gravityWell.active = true; 
+        GAME.gravityWell.type = 'pull';
+    } else if (e.button === 2 && ShopSystem.hasRepulse()) { // Right Click
+        GAME.gravityWell.active = true;
+        GAME.gravityWell.type = 'push';
+    }
+});
+
+window.addEventListener('mouseup', () => { GAME.gravityWell.active = false; });
+
+// SPACEBAR (Alternative for Right Click/Repulse)
+window.addEventListener('keydown', (e) => {
+    if(GAME.active && e.code === 'Space' && ShopSystem.hasRepulse()) {
+        GAME.gravityWell.active = true;
+        GAME.gravityWell.type = 'push';
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if(GAME.active && e.code === 'Space') {
+        GAME.gravityWell.active = false;
+    }
+});
+
+window.addEventListener('mousemove', (e) => {
+    GAME.gravityWell.x = e.clientX; GAME.gravityWell.y = e.clientY;
+    GAME.mouse.x = e.clientX; GAME.mouse.y = e.clientY;
+});
+
+// --- RENDER LOOP ---
+function loop() {
+    requestAnimationFrame(loop);
+    ctx.fillStyle = 'rgba(5, 6, 8, 0.2)';
+    ctx.fillRect(0, 0, width, height);
+
+    if (!GAME.active) return;
+
+    // 1. SURVIVAL PROGRESSION
+    if (GAME.mode === 'survival') {
+        GAME.entropy += 0.05; 
+        if (GAME.entropy >= 100) { GAME.lives = 0; gameOver(); }
+        
+        // Timer
+        GAME.timeElapsed++;
+        if (GAME.timeElapsed % GAME.eventInterval === 0) {
+            GAME.level++;
+            // Random Event Selection for Level 2+
+            const rand = Math.random();
+            if (rand < 0.33) {
+                GAME.currentEvent = 'none';
+                showLevelText(`LEVEL ${GAME.level}`);
+            } else if (rand < 0.66) {
+                GAME.currentEvent = 'wind';
+                showLevelText(`LEVEL ${GAME.level}`);
+            } else {
+                GAME.currentEvent = 'asteroids';
+                showLevelText(`LEVEL ${GAME.level}`);
+            }
+        }
+
+        // Spawn Asteroids if event is active
+        if (GAME.currentEvent === 'asteroids' && Math.random() < 0.02) {
+            GAME.asteroids.push(new Asteroid());
+        }
+    }
+
+    dust.forEach(d => d.draw());
+    
+    // Solar Wind Visuals
+    if (GAME.currentEvent === 'wind') {
+        ctx.fillStyle = 'rgba(200, 200, 255, 0.05)';
+        for(let i=0; i<10; i++) {
+            const rx = Math.random() * width; const ry = Math.random() * height;
+            ctx.fillRect(rx, ry, 50, 1);
+        }
+    }
+
+    GAME.constellations.forEach(c => c.draw());
+    GAME.ignitedStars.forEach(s => s.draw());
+    GAME.nebulae.forEach(n => { n.update(); n.draw(); });
+    
+    if (GAME.mode === 'survival') {
+        GAME.rogueStars.forEach(rs => { rs.update(); rs.draw(); });
+        GAME.asteroids.forEach(a => { a.update(); a.draw(); });
+    }
+
+    comet.update();
+    targets.forEach(t => { t.update(); t.draw(); });
+    checkCollisions();
+
+    // Cursor (Gravity Well)
+    if (GAME.gravityWell.active) {
+        const visualRadius = ShopSystem.getCursorRadius();
+        // Red for push, White for pull
+        const color = GAME.gravityWell.type === 'push' ? '255, 50, 50' : '255, 255, 255';
+        
+        ctx.beginPath(); ctx.arc(GAME.gravityWell.x, GAME.gravityWell.y, visualRadius, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(${color},0.1)`; ctx.lineWidth = 1; ctx.stroke();
+        
+        ctx.beginPath(); ctx.moveTo(GAME.gravityWell.x, GAME.gravityWell.y);
+        ctx.lineTo(comet.x, comet.y);
+        ctx.strokeStyle = `rgba(${color},0.05)`; ctx.stroke();
+    } else {
+        ctx.beginPath(); ctx.arc(GAME.mouse.x, GAME.mouse.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#556'; ctx.fill();
+    }
+
+    comet.draw();
+
+    GAME.particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, 2, 2); ctx.globalAlpha = 1;
+        if(p.life <= 0) GAME.particles.splice(i, 1);
+    });
+
+    if (GAME.mode === 'survival' && GAME.entropy > 1) {
+        const maxRadius = Math.max(width, height) / 1.5;
+        const currentRadius = maxRadius * (1 - (GAME.entropy / 110)); 
+        const grad = ctx.createRadialGradient(width/2, height/2, currentRadius, width/2, height/2, maxRadius + 100);
+        grad.addColorStop(0, 'rgba(200, 230, 255, 0)');
+        grad.addColorStop(0.8, 'rgba(200, 230, 255, 0.3)');
+        grad.addColorStop(1, 'rgba(220, 240, 255, 0.9)');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+    }
+    
+    drawLives();
+}
+
+loop();
+</script>
+</body>
+</html>

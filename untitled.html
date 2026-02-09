@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Orbital Architect</title>
+    <title>Orbital Architect: Starlight</title>
     <style>
         body { margin: 0; background: #050608; overflow: hidden; font-family: 'Georgia', serif; user-select: none; }
         canvas { display: block; }
@@ -25,29 +25,20 @@
 <div id="ui">
     <h1>ORBITAL</h1>
     <p>CLICK TO INITIALIZE SEQUENCE</p>
-    <p style="font-size: 12px; margin-top: 50px;">(Click & Hold to create Gravity. Guide the Comet.)</p>
+    <p style="font-size: 12px; margin-top: 50px;">(Click & Hold to create Gravity. Ignite the Suns.)</p>
 </div>
 
 <div id="hud">SYSTEM STABLE</div>
 <canvas id="canvas"></canvas>
 
 <script>
-/**
- * THE ENGINE
- * - Web Audio API for procedural soundtrack
- * - Canvas API for rendering
- * - Newtonian Physics for movement
- */
-
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const ui = document.getElementById('ui');
 const hud = document.getElementById('hud');
 
 let width, height;
-let frames = 0;
 
-// Resize handling
 function resize() {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
@@ -55,7 +46,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// --- AUDIO SYSTEM (Procedural) ---
+// --- AUDIO SYSTEM ---
 const AudioEngine = {
     ctx: null,
     masterGain: null,
@@ -70,11 +61,10 @@ const AudioEngine = {
         // Background Drone
         this.droneOsc = this.ctx.createOscillator();
         this.droneOsc.type = 'sine';
-        this.droneOsc.frequency.value = 55; // Low A
+        this.droneOsc.frequency.value = 55; 
         this.droneOsc.connect(this.masterGain);
         this.droneOsc.start();
         
-        // Filter for drone
         this.filter = this.ctx.createBiquadFilter();
         this.filter.type = 'lowpass';
         this.filter.frequency.value = 200;
@@ -84,33 +74,38 @@ const AudioEngine = {
     },
     playCollect: function() {
         if (!this.ctx) return;
+        // A deeper, more cosmic boom for the implosion
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.5); // Pitch drop
         
-        // Reverb effect (fake echo)
-        const delay = this.ctx.createDelay();
-        delay.delayTime.value = 0.2;
-        const feedback = this.ctx.createGain();
-        feedback.gain.value = 0.3;
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
         
         osc.connect(gain);
         gain.connect(this.masterGain);
-        gain.connect(delay);
-        delay.connect(feedback);
-        feedback.connect(delay);
-        delay.connect(this.masterGain);
-        
         osc.start();
         osc.stop(this.ctx.currentTime + 1);
+        
+        // High sparkle for the star birth
+        setTimeout(() => {
+            const osc2 = this.ctx.createOscillator();
+            const gain2 = this.ctx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(800, this.ctx.currentTime);
+            osc2.frequency.linearRampToValueAtTime(1200, this.ctx.currentTime + 0.1);
+            gain2.gain.setValueAtTime(0.05, this.ctx.currentTime);
+            gain2.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+            osc2.connect(gain2);
+            gain2.connect(this.masterGain);
+            osc2.start();
+            osc2.stop(this.ctx.currentTime + 0.5);
+        }, 400); // Delay to match visual implosion
     },
     updateDrone: function(speed) {
         if (!this.droneOsc) return;
-        // Modulate pitch and filter based on speed
         const targetFreq = 55 + (speed * 2);
         this.droneOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.1);
         this.filter.frequency.setTargetAtTime(200 + (speed * 50), this.ctx.currentTime, 0.1);
@@ -120,13 +115,40 @@ const AudioEngine = {
 // --- GAME STATE ---
 const GAME = {
     active: false,
-    level: 1,
+    level: 0,
     gravityWell: { x: 0, y: 0, active: false, mass: 2000 },
     mouse: { x: 0, y: 0 },
-    particles: []
+    particles: [],
+    ignitedStars: [] // Stores the permanent stars
 };
 
 // --- CLASSES ---
+
+class IgnitedStar {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.alpha = 0;
+        this.maxAlpha = Math.random() * 0.5 + 0.5;
+        this.size = Math.random() * 2 + 1;
+    }
+    draw() {
+        if (this.alpha < this.maxAlpha) this.alpha += 0.02;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+        ctx.fill();
+
+        // Subtle twinkle
+        if (Math.random() > 0.99) {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+}
 
 class Comet {
     constructor() {
@@ -140,21 +162,16 @@ class Comet {
         this.y = height / 2;
         this.vx = 4;
         this.vy = -2;
-        this.dead = false;
-        this.fuel = 100;
     }
 
     update() {
-        if (this.dead) return;
-
-        // Apply Gravity from Mouse
+        // Gravity Logic
         if (GAME.gravityWell.active) {
             const dx = GAME.gravityWell.x - this.x;
             const dy = GAME.gravityWell.y - this.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            const force = GAME.gravityWell.mass / (dist * dist); // Newton
+            const force = GAME.gravityWell.mass / (dist * dist); 
             const angle = Math.atan2(dy, dx);
-            
             this.vx += Math.cos(angle) * force;
             this.vy += Math.sin(angle) * force;
         }
@@ -162,20 +179,20 @@ class Comet {
         this.x += this.vx;
         this.y += this.vy;
 
-        // Tail Physics (Inverse Kinematics-ish)
+        // Tail Physics
         let targetX = this.x;
         let targetY = this.y;
         for(let i=0; i<this.tail.length; i++) {
             let seg = this.tail[i];
             let dx = targetX - seg.x;
             let dy = targetY - seg.y;
-            seg.x += dx * 0.3; // Drag speed
+            seg.x += dx * 0.3;
             seg.y += dy * 0.3;
             targetX = seg.x;
             targetY = seg.y;
         }
 
-        // Bounds (Wrap around)
+        // Bounds
         if (this.x < 0) this.x = width;
         if (this.x > width) this.x = 0;
         if (this.y < 0) this.y = height;
@@ -191,16 +208,13 @@ class Comet {
         ctx.beginPath();
         if (this.tail.length > 0) ctx.moveTo(this.tail[0].x, this.tail[0].y);
         for(let i=1; i<this.tail.length; i++) {
-            // Bezier curve for smoothness
             const xc = (this.tail[i].x + this.tail[i-1].x) / 2;
             const yc = (this.tail[i].y + this.tail[i-1].y) / 2;
             ctx.quadraticCurveTo(this.tail[i-1].x, this.tail[i-1].y, xc, yc);
         }
-        // Gradient Tail
         const grad = ctx.createLinearGradient(this.x, this.y, this.tail[this.tail.length-1].x, this.tail[this.tail.length-1].y);
         grad.addColorStop(0, '#fff');
         grad.addColorStop(1, 'rgba(255,255,255,0)');
-        
         ctx.strokeStyle = grad;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
@@ -210,9 +224,6 @@ class Comet {
         ctx.beginPath();
         ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
         ctx.fillStyle = '#fff';
-        ctx.fill();
-        
-        // Glow
         ctx.shadowBlur = 15;
         ctx.shadowColor = 'rgba(255,255,255,0.8)';
         ctx.fill();
@@ -223,38 +234,86 @@ class Comet {
 class Target {
     constructor() {
         this.spawn();
+        this.state = 'active'; // active, expanding, contracting
+        this.animRadius = 0;
     }
     spawn() {
         this.x = Math.random() * (width - 200) + 100;
         this.y = Math.random() * (height - 200) + 100;
-        this.radius = 20;
-        this.collected = false;
+        this.baseRadius = 20;
+        this.currentRadius = 20;
         this.pulse = 0;
+        this.state = 'active';
     }
+    
+    triggerCollapse() {
+        this.state = 'expanding';
+        this.animRadius = this.baseRadius;
+        // Initial Explosion Particles
+        createExplosion(this.x, this.y, 5, 'out'); 
+    }
+
     update() {
-        this.pulse += 0.05;
+        if (this.state === 'active') {
+            this.pulse += 0.05;
+            this.currentRadius = this.baseRadius + Math.sin(this.pulse) * 2;
+        } 
+        else if (this.state === 'expanding') {
+            // Rapid Expansion
+            this.currentRadius += 4;
+            if (this.currentRadius > 60) {
+                this.state = 'contracting';
+            }
+        } 
+        else if (this.state === 'contracting') {
+            // Violent Contraction
+            this.currentRadius *= 0.8; // Exponential decay (fast suck)
+            if (this.currentRadius < 1) {
+                // Birth a star
+                GAME.ignitedStars.push(new IgnitedStar(this.x, this.y));
+                GAME.level++;
+                hud.innerText = "STARS IGNITED: " + GAME.level;
+                this.spawn(); // Move to new location
+            }
+        }
     }
+
     draw() {
-        if(this.collected) return;
-        const r = this.radius + Math.sin(this.pulse) * 2;
-        
-        // Ethereal Ring
+        // If contracting, draw the "Black Hole" effect
+        if (this.state === 'contracting') {
+             ctx.beginPath();
+             ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI*2);
+             ctx.fillStyle = '#000'; // Black core
+             ctx.strokeStyle = '#fff'; // White event horizon
+             ctx.lineWidth = 2;
+             ctx.fill();
+             ctx.stroke();
+             return;
+        }
+
+        // Draw Ring
         ctx.beginPath();
-        ctx.arc(this.x, this.y, r, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)'; // Gold
-        ctx.lineWidth = 1;
+        ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI*2);
+        
+        if (this.state === 'expanding') {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+        } else {
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+            ctx.lineWidth = 1;
+        }
         ctx.stroke();
 
-        // Core
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
-        ctx.fillStyle = '#fdcb6e';
-        ctx.fill();
-        
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#fdcb6e';
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        // Draw Core (only if active)
+        if (this.state === 'active') {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = '#fdcb6e';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fdcb6e';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
     }
 }
 
@@ -273,37 +332,32 @@ class Dust {
 
 // --- LOGIC ---
 const comet = new Comet();
-const targets = [];
 const dust = [];
+const target = new Target(); // Single target for focus
 
 for(let i=0; i<100; i++) dust.push(new Dust());
-for(let i=0; i<3; i++) targets.push(new Target());
 
 function checkCollisions() {
-    targets.forEach(t => {
-        if (!t.collected) {
-            const dx = comet.x - t.x;
-            const dy = comet.y - t.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            
-            if (dist < t.radius + 10) {
-                t.spawn();
-                AudioEngine.playCollect();
-                createExplosion(t.x, t.y);
-                GAME.level++;
-                hud.innerText = "ORBITAL RESONANCE: " + GAME.level;
-            }
+    if (target.state === 'active') {
+        const dx = comet.x - target.x;
+        const dy = comet.y - target.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < target.currentRadius + 10) {
+            target.triggerCollapse();
+            AudioEngine.playCollect();
         }
-    });
+    }
 }
 
-function createExplosion(x, y) {
-    for(let i=0; i<20; i++) {
+function createExplosion(x, y, speed, dir) {
+    for(let i=0; i<15; i++) {
         GAME.particles.push({
             x: x, y: y,
-            vx: (Math.random() - 0.5) * 5,
-            vy: (Math.random() - 0.5) * 5,
-            life: 1.0
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            life: 1.0,
+            color: '#fff'
         });
     }
 }
@@ -334,18 +388,22 @@ window.addEventListener('mousemove', (e) => {
 function loop() {
     requestAnimationFrame(loop);
 
-    // Clear with Fade Effect (Trails)
+    // Clear with Fade (Trails)
     ctx.fillStyle = 'rgba(5, 6, 8, 0.2)';
     ctx.fillRect(0, 0, width, height);
 
     if (!GAME.active) return;
 
-    // Draw Dust
+    // Draw Background Dust
     dust.forEach(d => d.draw());
 
-    // Update Entities
+    // Draw Ignited Stars (The permanent ones)
+    GAME.ignitedStars.forEach(s => s.draw());
+
+    // Logic
     comet.update();
-    targets.forEach(t => { t.update(); t.draw(); });
+    target.update();
+    target.draw();
     checkCollisions();
 
     // Draw Gravity Well (Cursor)
@@ -357,18 +415,11 @@ function loop() {
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.arc(GAME.gravityWell.x, GAME.gravityWell.y, 10, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.fill();
-        
-        // Connection Line
-        ctx.beginPath();
         ctx.moveTo(GAME.gravityWell.x, GAME.gravityWell.y);
         ctx.lineTo(comet.x, comet.y);
         ctx.strokeStyle = 'rgba(255,255,255,0.05)';
         ctx.stroke();
     } else {
-        // Passive Cursor
         ctx.beginPath();
         ctx.arc(GAME.mouse.x, GAME.mouse.y, 2, 0, Math.PI*2);
         ctx.fillStyle = '#556';
@@ -380,8 +431,8 @@ function loop() {
     // Draw Particles
     GAME.particles.forEach((p, i) => {
         p.x += p.vx; p.y += p.vy;
-        p.life -= 0.02;
-        ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`;
+        p.life -= 0.03;
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
         ctx.fillRect(p.x, p.y, 2, 2);
         if(p.life <= 0) GAME.particles.splice(i, 1);
     });

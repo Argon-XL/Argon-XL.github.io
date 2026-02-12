@@ -58,19 +58,43 @@ background-color: white;
 <input type="text" id="Newperson">
 <button id="add-person">Add A Person, Any Person</button>
 <button id="removePerson">Remove the Caboose</button>
+
+<input type="color" value="#ff0000" id="pickler">
 </body>
 <script type="text/javascript">
-	let people = ["me","myself","I"]
+	
+let me = {
+		name: "me",
+		studentId: "c29me3",
+		fav_color: "orange",
+	}
+	let dalton = {
+		year:2025,
+		studentNum: 500,
+	}
+
+
+	let someone = {
+		name:"wheyy",
+		studentId: "misterious",
+		fav_color: "darkgoldenrod",
+	}
+let people = [me, someone, {name: "timy", studentId: "c29tc", fav_color:"peachpuff"}]
+console.log(people)
+
+	// let people = ["me","myself","I"]
 	let train = document.getElementById("train")
+	console.log(me.studentId)
 
 	function maketrain(){
 		train.innerHTML = ""
 	for(let i=0; i< people.length; i++){
 		console.log(people[i])
 		let cart = document.createElement("div")
-		cart.textContent = people[i]
+		cart.textContent = people[i].name
 		cart.classList.add("cart")	
 		train.appendChild(cart)
+		cart.style.backgroundColor = people[i].fav_color
 	}
 }
 	maketrain()
@@ -78,8 +102,13 @@ background-color: white;
 	addPersonBtn.addEventListener("click",function() {
 		// console.log("wsp")
 		let personInput = document.getElementById("Newperson")
+		let pickler = document.getElementById("pickler")
 		console.log(personInput.value)
-		people.push(personInput.value)
+		people.push({
+			name: personInput.value,
+			fav_color: pickler.value,
+		})
+		// people.push(personInput.value)
 		maketrain()
 	})
 let Removeperson = document.getElementById("removePerson")

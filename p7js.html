@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+ <html>
+ <head>
+ 	<title>Document</title>
+ 	<script src = "https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+ </head>
+ <body>
+<script>
+	function setup() {
+  createCanvas(1800, 1500);
+}
+
+let d = (x, y, mouseX, mouseY)
+
+function hexagon(transX, transY, s) {
+  stroke(255);
+  strokeWeight(5);
+  fill('rgba(255, 255, 100, .25)');
+  push();
+  translate(transX, transY);
+  rotate(frameCount * 0.06)
+  scale(s);
+  beginShape();
+  vertex(-75, -130);
+  vertex(75, -130);
+  vertex(150, 0);
+  vertex(75, 130);
+  vertex(-75, 130);
+  vertex(-150, 0);
+  endShape(CLOSE); 
+  pop();
+}
+
+
+
+function draw() {
+	background("#1d1e52")
+	for (let i = 0; i < 11; i++) {
+		for (let j = 0; j < 11; j++) {
+		let x = i*251
+		let y = j*260
+  fill("#cca09d")
+  hexagon(x, y, 1);
+  hexagon(x-90, y-84, 1);
+
+
+  }
+}}
+
+
+</script>
+ </body>
+ </html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+ <html>
+ <head>
+ 	<title>Document</title>
+ 	<script src = "https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+ </head>
+ <body>
+<script>
+	function setup() {
+createCanvas(1800, 1500);
+}
+function draw(){
+	background("#6d8bbf")
+	push()
+	// rotate(PI/8)
+	translate(100, 100)
+	rotate(frameCount * 0.01)
+  // Use 6 vertices.
+	rectMode(CENTER)
+	rect(33,33,99, 50)
+pop()
+
+  ellipse(1000, 777, 80, 40, 6);
+  ellipse(777, 777, 280, 280);
+	rotate(PI/8)
+
+	push()
+translate(300,300)
+rotate(frameCount * 0.02)
+ noStroke();
+  fill(255, mouseX/4, mouseY/4);
+  ellipse(mouseX, mouseY, 200);
+  ellipse(mouseX +100, mouseY -110, 120);
+  ellipse(mouseX -100, mouseY -110, 120);
+  pop()
+}
+
+
+
+</script>
+</body>
+</html>

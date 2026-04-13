@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		.container{
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			row-gap: 11px;
+			column-gap: 11px;
+		}
+		.item{
+			border:13px solid darkseagreen;
+		}
+		.item img{
+			width:100%;
+			height: 100%;
+			object-fit: cover;
+		}
+		#item1{
+		grid-column: 2/4;
+		grid-row: 1/3;
+		}
+		@media(max-width: 800px){
+			body{
+				background-color: deeppink;
+			}
+			.container{
+				grid-template-columns: repeat(1, 1fr);
+			}
+		}
+
+	</style>
+</head>
+<body>
+<div class="container">
+<div id="item1" class="item">
+<img src="niffler.png" alt="niffler">
+	</div>
+<div class="item">
+<img src="dobby.png" alt="house elf">
+</div>
+<div class="item"><img src="ghyghy.png" alt="biplane"></div>
+<div class="item"><img src="moooooonjally.png" alt="jeely"></div>
+<div class="item"><img src="grey.png" alt="cloud"></div>
+</div>
+</body>
+</html>

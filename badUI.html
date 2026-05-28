@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>document</title>
+	<style>
+		#badbutton{
+			position: absolute;
+		}
+		#ui{
+			position: absolute;
+			animation-name: swing;
+		}
+@keyframes swing {
+		from{
+			transform: rotateZ(180deg)rotateX(-60deg) rotateY(-180deg);
+		}
+		to{
+			transform: rotateZ(180deg)rotateX(50deg)rotateY(180deg);
+		}
+	}
+	</style>
+
+
+</head>
+<body>
+<button id="ui">click here</button>
+
+<script type="text/javascript">
+let badbutton = document.getElementById("ui")
+console.log(badbutton)
+
+badbutton.addEventListener("click", function(){
+console.log("alex eats quokkas")
+})
+badbutton.addEventListener("mouseover",function (){
+	ui.style.left = Math.random()*1000+"px"
+	ui.style.top = Math.random()*950+"px"
+	console.log("hover")
+	badbutton.style.transform = "scale(-1,1)"
+})
+badbutton.addEventListener("mouseout",function (){
+	console.log("byex3")
+	badbutton.style.transform = "scale(1,1)"
+	alert("too slow SNAKIE")
+
+})
+</script>
+</body>
+</html>

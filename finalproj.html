@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type=text/css>
+	body{
+		background-image: url("snowmas.jpeg");
+		background-repeat: no-repeat;
+		background-size: cover;
+		z-index: 0;
+	}
+	#skier{
+		position: absolute;
+		top: 100px;
+		left: 50vw;
+		height: 67px;
+		width: 85px;
+		background-image: url("boarder.png");
+		background-size: cover;
+		background-repeat: no-repeat;
+		z-index: 3;
+	}
+
+	.blocker{
+		background-color: forestgreen;
+		width: 40px;
+		height: 60px;
+		border-radius: 10px;
+		position: absolute;
+		background-image: url("pines.jpeg");
+		background-size: contain;
+	}
+	</style>
+</head>
+<body>
+<div id="skier"></div>
+<div>Score: <span id="score">0</span></div>
+<script type="text/javascript">
+
+let hill = 0
+let skier = document.getElementById("skier")
+
+function maybecrash(){
+
+    const skierRect = skier.getBoundingClientRect()
+
+    const blockers = document.querySelectorAll(".blocker")
+
+    blockers.forEach(blocker => {
+
+        const blockerRect = blocker.getBoundingClientRect()
+
+        const touching =
+            skierRect.left < blockerRect.right &&
+            skierRect.right > blockerRect.left &&
+            skierRect.top < blockerRect.bottom &&
+            skierRect.bottom > blockerRect.top
+
+        if(touching){
+            BOOOM()
+        }
+    })
+}
+
+function fall(){
+	let Fallfactor = 1.8
+    let currentTop = parseInt(getComputedStyle(skier).top)
+
+    skier.style.top = currentTop + Fallfactor + "px"
+
+    maybecrash()
+
+    if(currentTop > 940){
+        skier.style.top = Math.random() * 50 + "px" 
+        hill += 1
+        document.getElementById("score").innerText = hill
+        obstaclize()
+        console.log(hill)
+    }
+}
+
+function obstaclize(){
+
+let blocknumber = 15 + hill
+document.querySelectorAll(".blocker").forEach(blocker => {
+        blocker.remove()
+    })
+
+for (let i = 0; i < blocknumber; i++) {
+  const blocker = document.createElement("div");
+  blocker.classList.add("blocker");
+  blocker.style.left = Math.random() * (window.innerWidth) + "px";
+  blocker.style.top = 250 + Math.random() * (window.innerHeight - 250) + "px";
+  document.body.appendChild(blocker);
+	}
+}
+
+
+function moveSkier(event){
+
+    let currentLeft = parseInt(getComputedStyle(skier).left)
+
+    if(event.key == "ArrowLeft"){
+        skier.style.left = currentLeft - 21 + "px"
+    }
+
+    if(event.key == "ArrowRight"){
+        skier.style.left = currentLeft + 21 + "px"
+    }
+}
+
+function BOOOM(){
+	console.log("Contact")
+	document.body.style.backgroundImage = 'url("gameovergif.gif")'
+	skier.style.backgroundImage = 'url("down.png")'
+	skier.style.width = 340 + "px"
+	skier.style.height = 450 + "px"
+	setTimeout(function () {
+    alert("You hit a tree! Ye lost, r'load to r'play");
+  }, 2048);
+}
+
+document.addEventListener("keydown", moveSkier)
+
+obstaclize()
+setInterval(fall, 5);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+ <html>
+ <head>
+ 	<title>Document</title>
+ 	<script src = "https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+ </head>
+ <body>
+<script>
+	let xpos
+	let ypos
+	let xspeed
+	let yspeed
+	let fillcollins = "#61C9A8"
+	
+	function setup() {
+createCanvas(693, 301)
+xpos = width/2
+ypos = height/2
+xspeed = 44
+yspeed = 20
+d = getRandomdiameter()
+
+}
+function draw(){
+	background("#6d8bbf")
+if (xpos + 25 > width || xpos -25 < 0){
+	xspeed*= -1
+}
+xpos += xspeed
+if (ypos + 25 > height || ypos -25 < 0){
+	yspeed*= -1
+}
+changeBallColor("#b5179e", "240046")
+
+ypos += yspeed
+fill(fillcollins)
+circle(xpos, ypos, d)
+}
+function getRandomdiameter(){
+	let randomDiameter = random(25, 64)
+	return randomDiameter
+}
+
+function changeBallColor(topRightcolor, Otherplacecolor) {
+	if(xpos> width/2 && ypos <height/2){
+	fillcollins = topRightcolor
+}else if(xpos > width/2 && ypos > height/2){
+fillcollins= Otherplacecolor
+}else if(xpos < width/2 && ypos < height/2){
+fillcollins= "#fb8b24"
+}else{
+	fillcollins = "#cdb4db"}
+}
+
+
+
+</script>
+</body>
+</html>
